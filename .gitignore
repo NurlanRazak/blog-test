@@ -1,2 +1,6 @@
 /vendor
 .env
+/templates_c/*
+!/templates_c/.gitkeep
+/cache/*
+!/cache/.gitkeep
