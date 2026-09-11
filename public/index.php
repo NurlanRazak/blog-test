@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use App\Config\Database;
+use App\Router;
+use App\Controllers\HomeController;
 
-$tables= Database::connection()
-    ->query("SHOW TABLES")
-    ->fetchAll(\PDO::FETCH_COLUMN);
+$router = new Router();
 
-echo '<pre>';
-print_r($tables);
+$router->get('/', HomeController::class, 'index');
+
+$router->dispatch(
+    $_SERVER['REQUEST_METHOD'] ?? 'GET',
+    $_SERVER['REQUEST_URI'] ?? '/'
+);

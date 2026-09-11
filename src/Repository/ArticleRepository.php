@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Config\Database;
 use PDO;
+use Throwable;
 
 final class ArticleRepository
 {
@@ -15,6 +16,28 @@ final class ArticleRepository
     public function __construct()
     {
         $this->db = Database::connection();
+    }
+
+    /**
+     * @param int $categoryId
+     * @param int $limit
+     * @return array
+     */
+    public function latestForCategory(int $categoryId, int $limit = 3): array
+    {
+        $sql = "SELECT a.id, a.title, a.slug, a.image, a.description, a.views, a.published_at
+                FROM articles a
+                INNER JOIN article_category ac ON ac.article_id = a.id
+                WHERE ac.category_id = :category_id
+                ORDER BY a.published_at DESC
+                LIMIT :limit";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue('category_id', $categoryId, PDO::PARAM_INT);
+        $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
     }
 
     /**
@@ -39,30 +62,38 @@ final class ArticleRepository
         int $views = 0
     ): int {
 
-        $stmt = $this->db->prepare(
-            'INSERT INTO articles (title, slug, image, description, content, views, published_at)
-             VALUES (:title, :slug, :image, :description, :content, :views, :published_at)'
-        );
+        $this->db->beginTransaction();
 
-        $stmt->execute([
-            'title'        => $title,
-            'slug'         => $slug,
-            'image'        => $image,
-            'description'  => $description,
-            'content'      => $content,
-            'views'        => $views,
-            'published_at' => $publishedAt,
-        ]);
+        try {
+            $stmt = $this->db->prepare(
+                'INSERT INTO articles (title, slug, image, description, content, views, published_at)
+         VALUES (:title, :slug, :image, :description, :content, :views, :published_at)'
+            );
+            $stmt->execute([
+                'title'        => $title,
+                'slug'         => $slug,
+                'image'        => $image,
+                'description'  => $description,
+                'content'      => $content,
+                'views'        => $views,
+                'published_at' => $publishedAt,
+            ]);
 
-        $articleId = (int) $this->db->lastInsertId();
+            $articleId = (int) $this->db->lastInsertId();
 
-        $linkStmt = $this->db->prepare(
-            'INSERT INTO article_category (article_id, category_id) VALUES (:article_id, :category_id)'
-        );
-        foreach ($categoryIds as $categoryId) {
-            $linkStmt->execute(['article_id' => $articleId, 'category_id' => $categoryId]);
+            $linkStmt = $this->db->prepare(
+                'INSERT INTO article_category (article_id, category_id) VALUES (:article_id, :category_id)'
+            );
+            foreach ($categoryIds as $categoryId) {
+                $linkStmt->execute(['article_id' => $articleId, 'category_id' => $categoryId]);
+            }
+
+            $this->db->commit();
+
+            return $articleId;
+        } catch (Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
         }
-
-        return $articleId;
     }
 }

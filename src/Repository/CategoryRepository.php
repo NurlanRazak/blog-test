@@ -18,6 +18,24 @@ final class CategoryRepository
     }
 
     /**
+     * @return array
+     */
+    public function findWithArticles(): array
+    {
+        $sql = "SELECT c.id, c.name, c.slug, c.description
+                FROM categories c
+                WHERE EXISTS (
+                    SELECT 1 FROM article_category ac
+                    WHERE ac.category_id = c.id
+                )
+                ORDER BY c.name ASC";
+
+        $stmt = $this->db->query($sql);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
      * @param string $name
      * @param string $slug
      * @param string|null $description
