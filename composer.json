@@ -1,7 +1,7 @@
 {
   "name": "test-task/blog",
   "description": "Сайт на чистом php без фреймфрорков + Smarty шаблонизатор",
-  "type": "object",
+  "type": "project",
   "require": {
     "php": ">=8.1",
     "smarty/smarty": "^4.3"
