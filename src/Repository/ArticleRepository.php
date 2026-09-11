@@ -24,6 +24,89 @@ final class ArticleRepository
     }
 
     /**
+     * Похожие посты = посты, относящиеся хотя бы к одной категории, за исключением текущей.
+     * article, most recent first.
+     *
+     * @param int[] $categoryIds
+     * @return array<int, array<string, mixed>>
+     */
+    public function similarTo(int $articleId, array $categoryIds, int $limit = 3): array
+    {
+        if ($categoryIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($categoryIds), '?'));
+
+        $sql = "SELECT DISTINCT a.id, a.title, a.slug, a.image, a.description, a.views, a.published_at
+                FROM articles a
+                INNER JOIN article_category ac ON ac.article_id = a.id
+                WHERE ac.category_id IN ({$placeholders})
+                  AND a.id != ?
+                ORDER BY a.published_at DESC
+                LIMIT ?";
+
+        $stmt = $this->db->prepare($sql);
+
+        $i = 1;
+        foreach ($categoryIds as $categoryId) {
+            $stmt->bindValue($i++, $categoryId, PDO::PARAM_INT);
+        }
+        $stmt->bindValue($i++, $articleId, PDO::PARAM_INT);
+        $stmt->bindValue($i, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+
+    /**
+     * @param int $articleId
+     * @return array
+     */
+    public function categoriesFor(int $articleId): array
+    {
+        $sql = "SELECT c.id, c.name, c.slug
+                FROM categories c
+                INNER JOIN article_category ac ON ac.category_id = c.id
+                WHERE ac.article_id = :article_id
+                ORDER BY c.name ASC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['article_id' => $articleId]);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * @param int $articleId
+     * @return void
+     */
+    public function incrementViews(int $articleId): void
+    {
+        $stmt = $this->db->prepare('UPDATE articles SET views = views + 1 WHERE id = :id');
+        $stmt->execute(['id' => $articleId]);
+    }
+
+
+    /**
+     * @param string $slug
+     * @return array|null
+     */
+    public function findBySlug(string $slug): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT id, title, slug, image, description, content, views, published_at
+             FROM articles WHERE slug = :slug LIMIT 1'
+        );
+        $stmt->execute(['slug' => $slug]);
+
+        $article = $stmt->fetch();
+
+        return $article ?: null;
+    }
+
+    /**
      * Общее кол-во постов в категории, нужно для пагинации.
      */
     public function countForCategory(int $categoryId): int
