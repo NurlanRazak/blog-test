@@ -9,14 +9,16 @@ namespace App\Support;
  */
 final class Paginator
 {
+    public readonly int $currentPage;
     public readonly int $totalPages;
 
     public function __construct(
-        public readonly int $currentPage,
+        int $requestedPage,
         public readonly int $perPage,
         public readonly int $totalItems
     ) {
-        $this->totalPages = max(1, (int) ceil($totalItems / max(1, $perPage)));
+        $this->totalPages  = max(1, (int) ceil($totalItems / max(1, $perPage)));
+        $this->currentPage = min(max(1, $requestedPage), $this->totalPages);
     }
 
     public function offset(): int

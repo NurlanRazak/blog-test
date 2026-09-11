@@ -28,13 +28,22 @@ final class CategoryController extends BaseController
         $page    = max(1, (int) ($_GET['page'] ?? 1));
         $perPage = (int) $this->config['ARTICLES_PER_PAGE'];
 
-        $result    = $articleRepo->paginatedForCategory((int) $category['id'], $sort, $perPage, ($page - 1) * $perPage);
-        $paginator = new Paginator($page, $perPage, $result['total']);
+        // Сначала подсчитываем количество, чтобы пагинатор знал реальный диапазон страниц
+        $total     = $articleRepo->countForCategory((int) $category['id']);
+        $paginator = new Paginator($page, $perPage, $total);
+
+        // ...затем выполняем выборку, используя смещение, которое пагинатор уже ограничил допустимым диапазоном.
+        $articles = $articleRepo->findForCategory(
+            (int) $category['id'],
+            $sort,
+            $perPage,
+            $paginator->offset()
+        );
 
         $this->render('category.tpl', [
             'page_title' => $category['name'],
             'category'   => $category,
-            'articles'   => $result['items'],
+            'articles'   => $articles,
             'sort'       => $sort,
             'paginator'  => $paginator,
         ]);

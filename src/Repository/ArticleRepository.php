@@ -24,21 +24,26 @@ final class ArticleRepository
     }
 
     /**
-     * @param int $categoryId
-     * @param string $sort
-     * @param int $limit
-     * @param int $offset
-     * @return array
+     * Общее кол-во постов в категории, нужно для пагинации.
      */
-    public function paginatedForCategory(int $categoryId, string $sort, int $limit, int $offset): array
+    public function countForCategory(int $categoryId): int
     {
-        $orderBy = self::ALLOWED_SORTS[$sort] ?? self::ALLOWED_SORTS['date'];
-
-        $countStmt = $this->db->prepare(
+        $stmt = $this->db->prepare(
             'SELECT COUNT(*) FROM article_category WHERE category_id = :category_id'
         );
-        $countStmt->execute(['category_id' => $categoryId]);
-        $total = (int) $countStmt->fetchColumn();
+        $stmt->execute(['category_id' => $categoryId]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * посты в одной странице категории
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function findForCategory(int $categoryId, string $sort, int $limit, int $offset): array
+    {
+        $orderBy = self::ALLOWED_SORTS[$sort] ?? self::ALLOWED_SORTS['date'];
 
         $sql = "SELECT a.id, a.title, a.slug, a.image, a.description, a.views, a.published_at
                 FROM articles a
@@ -53,7 +58,7 @@ final class ArticleRepository
         $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
 
-        return ['items' => $stmt->fetchAll(), 'total' => $total];
+        return $stmt->fetchAll();
     }
 
     /**
