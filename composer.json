@@ -1,0 +1,17 @@
+{
+  "name": "test-task/blog",
+  "description": "Сайт на чистом php без фреймфрорков + Smarty шаблонизатор",
+  "type": "object",
+  "require": {
+    "php": ">=8.1",
+    "smarty/smarty": "^4.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "config": {
+    "optimize-autoloader": true
+  }
+}
