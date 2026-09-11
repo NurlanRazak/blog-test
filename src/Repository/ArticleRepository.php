@@ -11,11 +11,49 @@ use Throwable;
 final class ArticleRepository
 {
 
+    private const ALLOWED_SORTS = [
+        'date'  => 'a.published_at DESC',
+        'views' => 'a.views DESC',
+    ];
+
     private PDO $db;
 
     public function __construct()
     {
         $this->db = Database::connection();
+    }
+
+    /**
+     * @param int $categoryId
+     * @param string $sort
+     * @param int $limit
+     * @param int $offset
+     * @return array
+     */
+    public function paginatedForCategory(int $categoryId, string $sort, int $limit, int $offset): array
+    {
+        $orderBy = self::ALLOWED_SORTS[$sort] ?? self::ALLOWED_SORTS['date'];
+
+        $countStmt = $this->db->prepare(
+            'SELECT COUNT(*) FROM article_category WHERE category_id = :category_id'
+        );
+        $countStmt->execute(['category_id' => $categoryId]);
+        $total = (int) $countStmt->fetchColumn();
+
+        $sql = "SELECT a.id, a.title, a.slug, a.image, a.description, a.views, a.published_at
+                FROM articles a
+                INNER JOIN article_category ac ON ac.article_id = a.id
+                WHERE ac.category_id = :category_id
+                ORDER BY {$orderBy}
+                LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue('category_id', $categoryId, PDO::PARAM_INT);
+        $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return ['items' => $stmt->fetchAll(), 'total' => $total];
     }
 
     /**

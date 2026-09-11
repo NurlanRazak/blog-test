@@ -17,6 +17,16 @@ final class CategoryRepository
         $this->db = Database::connection();
     }
 
+    public function findBySlug(string $slug): ?array
+    {
+        $stmt = $this->db->prepare('SELECT id, name, slug, description FROM categories WHERE slug = :slug LIMIT 1');
+        $stmt->execute(['slug' => $slug]);
+
+        $category = $stmt->fetch();
+
+        return $category ?: null;
+    }
+
     /**
      * @return array
      */
